@@ -130,7 +130,6 @@ find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
 # Not sure why dedupe doesn't lift these to the top.
 pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
 delete crypto-browserify/test
-delete umd/node_modules/ruglify/test
 popd
 
 cd "$DIR/lib/node_modules/fibers/bin"
