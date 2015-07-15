@@ -127,11 +127,6 @@ find . -path '*/esprima-fb/test' | xargs rm -rf
 # dedupe isn't good enough to eliminate 4 copies of JSONstream, sigh.
 find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
 
-# Not sure why dedupe doesn't lift these to the top.
-pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
-delete crypto-browserify/test
-popd
-
 cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
 
