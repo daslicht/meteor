@@ -17,36 +17,34 @@ $BUNDLE_VERSION = Select-String -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUND
 $BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 
 # generate-dev-bundle-xxxxxxxx shortly
-$DIR = $script_path + "\gdbXXX"
+$DIR = "${script_path}\gdbXXX"
 echo $DIR
 
-# removing folders isn't easy on Windows, try both commands
-rm -Recurse -Force "${DIR}"
-cmd /C "rmdir /S /Q ${DIR}"
+cmd /C "rmdir $DIR /s /q"
 
-mkdir "$DIR"
-cd "$DIR"
+mkdir $DIR
+cd $DIR
 
 # install dev-bundle-package.json
 # use short folder names
-mkdir b # for build
-cd b
-mkdir t
-cd t
+# b for build
+mkdir "${DIR}\b\t"
+cd "${DIR}\b\t"
 
 npm config set loglevel error
 node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
 npm shrinkwrap
 
-mkdir -Force "${DIR}\server-lib\node_modules"
-cp -R "${DIR}\b\t\node_modules\*" "${DIR}\server-lib\node_modules\"
+mkdir "${DIR}\server-lib\node_modules"
 
-mkdir -Force "${DIR}\etc"
+cmd /c robocopy "${DIR}\b\t\node_modules" "${DIR}\server-lib\node_modules" /e /nfl /ndl
+
+mkdir "${DIR}\etc"
 Move-Item package.json "${DIR}\etc\"
 Move-Item npm-shrinkwrap.json "${DIR}\etc\"
 
-mkdir -Force "${DIR}\b\p"
+mkdir "${DIR}\b\p"
 cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
@@ -54,16 +52,14 @@ npm dedupe
 # install the latest flatten-packages
 npm install -g flatten-packages
 flatten-packages .
-cp -R "${DIR}\b\p\node_modules\" "${DIR}\lib\node_modules\"
-cd "$DIR"
+cmd /c robocopy "${DIR}\b\p\node_modules" "${DIR}\lib\node_modules" /e /nfl /ndl
 
-# deleting folders is hard so we try twice
-rm -Recurse -Force "${DIR}\b"
-cmd /C "rmdir /s /q $DIR\b"
+cmd /c rmdir "${DIR}\b" /s /q
 
-cd "$DIR"
-mkdir "$DIR\mongodb"
-mkdir "$DIR\mongodb\bin"
+cd $DIR
+
+mkdir "${DIR}\mongodb"
+mkdir "${DIR}\mongodb\bin"
 
 $webclient = New-Object System.Net.WebClient
 
@@ -74,21 +70,21 @@ If ($PLATFORM -eq 'windows_x86_64') {
   $mongo_name = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION}"
 }
 $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
-$mongo_zip = "$DIR\mongodb\mongo.zip"
+$mongo_zip = "${DIR}\mongodb\mongo.zip"
 
 $webclient.DownloadFile($mongo_link, $mongo_zip)
 
 $shell = New-Object -com shell.application
 $zip = $shell.NameSpace($mongo_zip)
 foreach($item in $zip.items()) {
-  $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
+  $shell.Namespace("${DIR}\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
 }
 
-cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
-cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
+cp "${DIR}\mongodb\$mongo_name\bin\mongod.exe" ${DIR}\mongodb\bin
+cp "${DIR}\mongodb\$mongo_name\bin\mongo.exe" ${DIR}\mongodb\bin
 
-rm -Recurse -Force $mongo_zip
-rm -Recurse -Force "$DIR\mongodb\$mongo_name"
+cmd /c rmdir $mongo_zip /s /q"
+cmd /c rmdir "${DIR}\mongodb\${mongo_name}" /s /q
 
 mkdir bin
 cd bin
@@ -107,8 +103,7 @@ flatten-packages .
 cd node_modules\npm
 npm install node-gyp
 
-# this path is too long
-rm -Recurse -Force "node_modules\node-gyp\node_modules\request\node_modules\combined-stream\node_modules\delayed-stream\test"
+cmd /c rmdir node_modules\node-gyp\node_modules\request\node_modules\combined-stream\node_modules\delayed-stream\test /s /q
 
 cd ..\..
 
@@ -119,17 +114,15 @@ cd $DIR
 # mark the version
 echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
 
-cd "$DIR\.."
+cd "${DIR}\.."
 
 # rename and move the folder with the devbundle
-# XXX this can generate a path that is too long
-Move-Item "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+cmd /c robocopy "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" /e /move /nfl /ndl
 
 cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 cmd /c 7z.exe a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
 del dev_bundle.tar
-rm -Recurse -Force "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
-cmd /C "rmdir /s /q dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+
+cmd /c rmdir "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" /s /q
 
 echo "Done building Dev Bundle!"
-
